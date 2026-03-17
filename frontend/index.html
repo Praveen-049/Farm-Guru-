@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farm Guru - Login</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="auth-body">
+
+    <div class="auth-card">
+        <h1 class="logo-text">Farm Guru</h1>
+        <p style="margin-bottom: 30px; color: var(--text-muted);">AI-Powered Agricultural Marketplace</p>
+
+        <h2>Welcome Back</h2>
+
+        <div class="input-group">
+            <label for="name">Full Name</label>
+            <input id="name" type="text" placeholder="John Doe">
+        </div>
+
+        <div class="input-group">
+            <label for="mobile">Mobile Number</label>
+            <input id="mobile" type="tel" placeholder="+91 98765-43210">
+        </div>
+
+        <div class="input-group">
+            <label for="password">Password</label>
+            <div class="password-container">
+                <input id="password" type="password" placeholder="••••••••">
+                <span class="password-toggle" onclick="togglePassword('password')">Show</span>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label for="role">My Role</label>
+            <select id="role">
+                <option value="farmer">Farmer / Seller</option>
+                <option value="consumer">Consumer / Buyer</option>
+            </select>
+        </div>
+
+        <button onclick="login()">Sign In to Dashboard</button>
+
+        <p style="margin-top: 25px; font-size: 14px; color: var(--text-muted);">
+            Don't have an account? <a href="registration.html"
+                style="color: var(--primary); text-decoration: none; font-weight: 700;">Create Account</a>
+        </p>
+    </div>
+
+    <script>
+        async function login() {
+            const name = document.getElementById("name").value;
+            const mobile = document.getElementById("mobile").value;
+            const password = document.getElementById("password").value;
+            const role = document.getElementById("role").value;
+
+            if (!name || !mobile || !password) {
+                alert("Please fill in all fields");
+                return;
+            }
+
+            try {
+                const res = await fetch("http://127.0.0.1:8000/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name, mobile, password })
+                });
+
+                const data = await res.json();
+
+                if (data.status === "success") {
+                    localStorage.setItem("name", data.name);
+                    localStorage.setItem("role", role);
+                    localStorage.setItem("email", data.email || ""); // Backup email storage
+                    window.location = "dashboard.html";
+                } else {
+                    alert(data.message || "Invalid login credentials");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Server error. Please try again later.");
+            }
+        }
+
+        function togglePassword(id) {
+            const input = document.getElementById(id);
+            const toggle = input.nextElementSibling;
+            if (input.type === "password") {
+                input.type = "text";
+                toggle.innerText = "Hide";
+            } else {
+                input.type = "password";
+                toggle.innerText = "Show";
+            }
+        }
+    </script>
+
+</body>
+
+</html>

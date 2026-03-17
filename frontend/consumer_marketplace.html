@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farm Guru - Marketplace</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="dashboard-container">
+    <aside class="sidebar">
+        <h2>Farm Guru</h2>
+        <nav id="nav-links">
+            <!-- Links loaded based on role -->
+        </nav>
+        <div style="margin-top: auto;">
+            <button onclick="logout()" class="btn-secondary">Sign Out</button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="top-bar">
+            <div>
+                <h1>Find Fresh Crops</h1>
+                <p style="color: var(--text-muted);">Discover farmers near you and buy directly from the source.</p>
+            </div>
+            <div style="display: flex; gap: 15px;">
+                <a href="consumer_map.html" class="btn-secondary" style="text-decoration: none; padding: 12px 20px; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                    🗺️ Map View
+                </a>
+            </div>
+        </header>
+
+        <div class="card glass" style="margin-bottom: 40px;">
+            <div style="display: grid; grid-template-columns: 1fr 200px 180px; gap: 20px; align-items: end;">
+                <div class="input-group" style="margin-bottom: 0;">
+                    <label>Search Crops</label>
+                    <input id="search-crop" placeholder="What are you looking for? (e.g. Tomato)" oninput="filterListings()">
+                </div>
+                <div class="input-group" style="margin-bottom: 0;">
+                    <label>Max Distance (km)</label>
+                    <input id="max-distance" type="number" value="100" oninput="filterListings()">
+                </div>
+                <button onclick="filterListings()" style="margin-bottom: 0;">Apply Filters</button>
+            </div>
+        </div>
+
+        <div id="consumer-listings" class="grid">
+            <!-- Listings loaded here -->
+            <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 60px;">
+                <p style="color: var(--text-muted);">Loading fresh listings from your area...</p>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    const userRole = localStorage.getItem("role") || "consumer";
+    const userEmail = localStorage.getItem("email") || "guest@example.com";
+    let allListings = [];
+    let userCoords = null;
+
+    // Sidebar navigation based on role
+    const nav = document.getElementById("nav-links");
+    if (userRole === "farmer") {
+        nav.innerHTML = `
+            <a href="dashboard.html">Dashboard</a>
+            <a href="marketplace.html">Sell Crops</a>
+            <a href="market.html">Market Prices</a>
+            <a href="demand.html">Demand Prediction</a>
+            <a href="consumer_marketplace.html" class="active">Buy Crops</a>
+        `;
+    } else {
+        nav.innerHTML = `
+            <a href="consumer_marketplace.html" class="active">Marketplace</a>
+            <a href="consumer_map.html">Map Search</a>
+            <a href="market.html">Market Prices</a>
+        `;
+    }
+
+    // Haversine Formula for distance calculation
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371; // km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    }
+
+    async function loadListings() {
+        try {
+            // Get user location first
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    userCoords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+                    fetchListings();
+                }, (err) => {
+                    console.warn("Location access denied. Showing distance from center.");
+                    userCoords = { lat: 28.6139, lon: 77.2090 }; // Default to Delhi
+                    fetchListings();
+                });
+            } else {
+                userCoords = { lat: 28.6139, lon: 77.2090 };
+                fetchListings();
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    async function fetchListings() {
+        const res = await fetch("http://127.0.0.1:8000/marketplace");
+        allListings = await res.json();
+        
+        // Calculate distance for each listing
+        allListings.forEach(item => {
+            if (item.latitude && item.longitude && userCoords) {
+                item.distance = calculateDistance(userCoords.lat, userCoords.lon, item.latitude, item.longitude);
+            } else {
+                item.distance = 999;
+            }
+        });
+
+        // Sort by nearest
+        allListings.sort((a, b) => a.distance - b.distance);
+        filterListings();
+    }
+
+    function filterListings() {
+        const query = document.getElementById("search-crop").value.toLowerCase();
+        const maxDist = parseFloat(document.getElementById("max-distance").value) || Infinity;
+        const container = document.getElementById("consumer-listings");
+        
+        container.innerHTML = "";
+        
+        const filtered = allListings.filter(item => {
+            const matchesQuery = item.crop.toLowerCase().includes(query);
+            const matchesDist = item.distance <= maxDist;
+            const isNotOwnListing = item.farmer !== userEmail;
+            return matchesQuery && matchesDist && isNotOwnListing;
+        });
+
+        if (filtered.length === 0) {
+            container.innerHTML = "<div class='card' style='grid-column: 1 / -1; text-align: center; padding: 60px;'><p>No crops found matching your criteria. Try adjusting filters.</p></div>";
+            return;
+        }
+
+        filtered.forEach(item => {
+            container.innerHTML += `
+                <div class="card crop-card fade-in">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                        <h3 style="margin: 0;">${item.crop}</h3>
+                        <span class="badge badge-primary">${item.distance.toFixed(1)} km away</span>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">
+                        Available: <strong>${item.quantity} kg</strong><br>
+                        Farmer: ${item.farmer}
+                    </p>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto;">
+                        <span style="font-size: 24px; font-weight: 800; color: var(--primary);">₹${item.price} <span style="font-size: 14px; font-weight: 500; color: var(--text-muted);">/kg</span></span>
+                        <button onclick="registerInterest('${item.id}')" style="width: auto; padding: 10px 20px;">I'm Interested</button>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    async function registerInterest(id) {
+        try {
+            const res = await fetch(`http://127.0.0.1:8000/buy/${id}?buyer_email=${userEmail}`, {
+                method: "POST"
+            });
+            const data = await res.json();
+            alert(data.message);
+        } catch (e) {
+            alert("Failed to register interest. Check backend connection.");
+        }
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location = "index.html";
+    }
+
+    loadListings();
+</script>
+
+</body>
+</html>

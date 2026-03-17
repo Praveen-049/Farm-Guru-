@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farm Guru - Register</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-body">
+
+<div class="auth-card">
+    <h1 class="logo-text">Farm Guru</h1>
+    <p style="margin-bottom: 30px; color: var(--text-muted);">Join our agricultural revolution</p>
+    
+    <h2>Create Account</h2>
+    
+    <div class="input-group">
+        <label for="name">Full Name</label>
+        <input id="name" type="text" placeholder="John Doe">
+    </div>
+
+    <div class="input-group">
+        <label for="mobile">Mobile Number</label>
+        <input id="mobile" type="tel" placeholder="+91 98765-43210">
+    </div>
+
+    <div class="input-group">
+        <label for="email">Email Address</label>
+        <input id="email" type="email" placeholder="name@example.com">
+    </div>
+        
+    <div class="input-group">
+        <label for="password">Password</label>
+        <div class="password-container">
+            <input id="password" type="password" placeholder="••••••••">
+            <span class="password-toggle" onclick="togglePassword('password')">Show</span>
+        </div>
+    </div>
+        
+    <div class="input-group">
+        <label for="role">Projected Role</label>
+        <select id="role" onchange="toggleConsumerType()">
+            <option value="farmer">Farmer / Seller</option>
+            <option value="consumer">Consumer / Buyer</option>
+        </select>
+    </div>
+
+    <div id="consumer-type-group" class="input-group" style="display: none;">
+        <label for="consumer_type">I am a...</label>
+        <select id="consumer_type">
+            <option value="Individual">Individual Buyer</option>
+            <option value="Restaurant">Restaurant / Hotel</option>
+            <option value="Vegetable Vendor">Vegetable Vendor / Retailer</option>
+        </select>
+    </div>
+
+    <button onclick="register()">Start Your Journey</button>
+    
+    <p style="margin-top: 25px; font-size: 14px; color: var(--text-muted);">
+        Already have an account? <a href="index.html" style="color: var(--primary); text-decoration: none; font-weight: 700;">Sign In</a>
+    </p>
+</div>
+
+<script>
+function togglePassword(id) {
+    const input = document.getElementById(id);
+    const toggle = input.nextElementSibling;
+    if (input.type === "password") {
+        input.type = "text";
+        toggle.innerText = "Hide";
+    } else {
+        input.type = "password";
+        toggle.innerText = "Show";
+    }
+}
+
+function toggleConsumerType() {
+    const role = document.getElementById("role").value;
+    const group = document.getElementById("consumer-type-group");
+    group.style.display = (role === "consumer") ? "block" : "none";
+}
+
+async function register(){
+    const name = document.getElementById("name").value;
+    const mobile = document.getElementById("mobile").value;
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+    const role = document.getElementById("role").value;
+    const consumer_type = role === "consumer" ? document.getElementById("consumer_type").value : null;
+
+    if(!name || !mobile || !email || !password){
+        alert("Please fill in all fields");
+        return;
+    }
+
+    try{
+        const res = await fetch("http://127.0.0.1:8000/register", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ name, mobile, email, password, role, consumer_type })
+        });
+
+        const data = await res.json();
+        alert(data.message || "Account created successfully!");
+        window.location = "index.html";
+    } catch(err) {
+        alert("Server error. Please try again later.");
+    }
+}
+</script>
+
+</body>
+</html>

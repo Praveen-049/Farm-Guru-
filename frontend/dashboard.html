@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farm Guru - Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div class="dashboard-container">
+    <aside class="sidebar">
+        <h2>Farm Guru</h2>
+        <nav id="nav-links">
+            <!-- Dynamic Navigation -->
+        </nav>
+        <div style="margin-top: auto;">
+            <button onclick="logout()" class="btn-secondary">Sign Out</button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="top-bar">
+            <div>
+                <h1 id="welcome" style="margin-bottom: 5px;">Welcome Back</h1>
+                <p style="color: var(--text-muted);">Here's what's happening on your farm today.</p>
+            </div>
+            <div style="display: flex; gap: 15px;">
+                <div style="text-align: right;">
+                    <p id="user-name" style="font-weight: 600;"></p>
+                    <p id="user-role" style="font-size: 12px; color: var(--primary); text-transform: uppercase; letter-spacing: 1px;"></p>
+                </div>
+            </div>
+        </header>
+
+        <div id="farmer-stats" class="grid">
+            <div class="card">
+                <label>Total Revenue</label>
+                <div id="total-revenue" style="font-size: 32px; font-weight: 800; color: var(--primary); margin: 10px 0;">₹0</div>
+                <div style="color: var(--text-muted); font-size: 14px; font-weight: 500;">Accumulated earnings</div>
+            </div>
+            <div class="card">
+                <label>Total Crops Sold</label>
+                <div id="total-crops-sold" style="font-size: 32px; font-weight: 800; color: var(--text-dark); margin: 10px 0;">0 kg</div>
+                <div style="color: var(--text-muted); font-size: 14px; font-weight: 500;">Volume sold to date</div>
+            </div>
+            <div class="card">
+                <label>Active Listings</label>
+                <div id="active-listings-count" style="font-size: 32px; font-weight: 800; color: var(--secondary); margin: 10px 0;">0</div>
+                <div style="color: var(--text-muted); font-size: 14px; font-weight: 500;">Currently in marketplace</div>
+            </div>
+        </div>
+
+        <div id="consumer-stats" class="grid" style="display: none;">
+            <div class="card">
+                <label>Nearby Farmers</label>
+                <div id="nearby-farmers-count" style="font-size: 32px; font-weight: 800; color: var(--primary); margin: 10px 0;">0</div>
+                <div style="color: var(--text-muted); font-size: 14px; font-weight: 500;">Sourcing locally</div>
+            </div>
+            <div class="card">
+                <label>Recent Orders</label>
+                <div id="recent-orders-count" style="font-size: 32px; font-weight: 800; color: var(--text-dark); margin: 10px 0;">0</div>
+                <div style="color: var(--text-muted); font-size: 14px; font-weight: 500;">Items purchased</div>
+            </div>
+            <div class="card">
+                <label>Market Health</label>
+                <div style="font-size: 32px; font-weight: 800; color: var(--secondary); margin: 10px 0;">Stable</div>
+                <div style="color: var(--text-muted); font-size: 14px; font-weight: 500;">Pricing index today</div>
+            </div>
+        </div>
+
+        <div id="farmer-charts" style="display: grid; grid-template-columns: 2fr 1.2fr; gap: 32px;">
+            <div class="card">
+                <h3>Sales Performance</h3>
+                <div style="height: 300px; position: relative;">
+                    <canvas id="salesChart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Most Profitable Crops</h3>
+                <div id="profitable-crops-list" style="margin-top: 15px;">
+                    <p style="color: var(--text-muted);">No data available yet.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="consumer-welcome" class="card" style="display: none; padding: 40px; text-align: center;">
+            <h2 style="color: var(--primary);">Ready to source fresh produce?</h2>
+            <p style="color: var(--text-muted); margin: 15px 0 25px 0;">Find local farmers and buy directly from the source to get the best prices and quality.</p>
+            <div style="display: flex; gap: 15px; justify-content: center;">
+                <button onclick="window.location='consumer_marketplace.html'" style="width: auto; padding: 12px 25px;">Browse Marketplace</button>
+                <button class="btn-secondary" onclick="window.location='consumer_map.html'" style="width: auto; padding: 12px 25px;">View Near Me Maps</button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    const name = localStorage.getItem("name") || "User";
+    const role = localStorage.getItem("role") || "Member";
+    const userEmail = localStorage.getItem("email") || "n57264433@gmail.com";
+
+    // Dynamic Sidebar based on role
+    const nav = document.getElementById("nav-links");
+    if (role === "farmer") {
+        nav.innerHTML = `
+            <a href="dashboard.html" class="active">Dashboard</a>
+            <a href="marketplace.html">Sell Crops</a>
+            <a href="market.html">Market Prices</a>
+            <a href="demand.html">Demand Prediction</a>
+            <a href="consumer_marketplace.html">Buy Crops</a>
+        `;
+    } else {
+        nav.innerHTML = `
+            <a href="consumer_marketplace.html" class="active">Marketplace</a>
+            <a href="consumer_map.html">Map Search</a>
+            <a href="market.html">Market Prices</a>
+        `;
+    }
+
+    document.getElementById("welcome").innerText = "Welcome, " + name;
+    document.getElementById("user-name").innerText = name;
+    document.getElementById("user-role").innerText = role;
+
+    let salesChart;
+
+    async function loadDashboardData() {
+        if (role === "consumer") {
+            document.getElementById("farmer-stats").style.display = "none";
+            document.getElementById("farmer-charts").style.display = "none";
+            document.getElementById("consumer-stats").style.display = "grid";
+            document.getElementById("consumer-welcome").style.display = "block";
+            
+            // Load Consumer Stats
+            try {
+                const res = await fetch("http://127.0.0.1:8000/marketplace");
+                const listings = await res.json();
+                const uniqueFarmers = new Set(listings.map(l => l.farmer)).size;
+                document.getElementById("nearby-farmers-count").innerText = uniqueFarmers;
+            } catch (e) { console.error(e); }
+            return;
+        }
+
+        try {
+            // Load Analytics
+            const analyticsRes = await fetch(`http://127.0.0.1:8000/analytics/${userEmail}`);
+            if (analyticsRes.ok) {
+                const analytics = await analyticsRes.json();
+                document.getElementById("total-revenue").innerText = `₹${analytics.total_revenue.toLocaleString()}`;
+                document.getElementById("total-crops-sold").innerText = `${analytics.total_crops_sold} kg`;
+
+                const profitableList = document.getElementById("profitable-crops-list");
+                if (analytics.most_profitable_crops && analytics.most_profitable_crops.length > 0) {
+                    profitableList.innerHTML = "";
+                    analytics.most_profitable_crops.forEach(crop => {
+                        profitableList.innerHTML += `
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9;">
+                                <span style="font-weight: 600;">${crop.crop}</span>
+                                <span class="badge badge-primary">₹${crop.revenue.toLocaleString()}</span>
+                            </div>`;
+                    });
+                }
+
+                // Initialize Chart
+                initSalesChart(analytics.most_profitable_crops);
+            }
+
+            // Load Active Listings Count
+            const listingsRes = await fetch(`http://127.0.0.1:8000/listings/farmer/${userEmail}`);
+            if (listingsRes.ok) {
+                const listings = await listingsRes.json();
+                document.getElementById("active-listings-count").innerText = listings.length;
+            }
+        } catch (error) {
+            console.error("Error loading dashboard data:", error);
+        }
+    }
+
+    function initSalesChart(data) {
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        
+        // Mocking trend data for the chart based on crops
+        const labels = data.map(d => d.crop);
+        const values = data.map(d => d.revenue);
+
+        if (salesChart) salesChart.destroy();
+
+        salesChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Revenue by Crop (₹)',
+                    data: values,
+                    backgroundColor: 'rgba(45, 106, 79, 0.7)',
+                    borderColor: 'rgba(45, 106, 79, 1)',
+                    borderWidth: 2,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { display: false } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    function logout(){
+        localStorage.clear();
+        window.location = "index.html";
+    }
+
+    loadDashboardData();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,6 @@
+[
+  {"crop":"Tomato","market":"Chennai","price":24,"distance":"20km"},
+  {"crop":"Tomato","market":"Salem","price":28,"distance":"150km"},
+  {"crop":"Onion","market":"Madurai","price":30,"distance":"120km"},
+  {"crop":"Rice","market":"Trichy","price":45,"distance":"80km"}
+]
